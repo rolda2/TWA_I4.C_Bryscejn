@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple To-Do List</title>
+    <style>
+        #app {
+            text-align: center;
+        }
+        #task-list {
+            list-style: none;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <h1>Simple To-Do List</h1>
+        <input type="text" id="task" placeholder="Add a new task">
+        <button id="add">Add Task</button>
+        <ul id="task-list"></ul>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const taskInput = document.getElementById("task");
+            const addTaskButton = document.getElementById("add");
+            const taskList = document.getElementById("task-list");
+            
+            function addTaskToList(taskText) {
+                const taskItem = document.createElement("li");
+                taskItem.textContent = taskText;
+
+                const deleteButton = document.createElement("button");
+                deleteButton.textContent = "Delete";
+                deleteButton.addEventListener("click", function () {
+                    const taskText = taskItem.textContent.replace('Delete', '').trim(); // Extract the task text
+                    deleteTask(taskText);
+                    taskItem.remove();
+                });
+                
+                taskItem.appendChild(deleteButton);
+                taskList.appendChild(taskItem);
+            }
+
+            // Load tasks from the server when the page loads
+            fetch('/api/tasks')
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(task => {
+                        addTaskToList(task.text);
+                        if (task.completed) {
+                            const taskItem = taskList.lastChild;
+                            taskItem.classList.add("completed");
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading tasks:', error);
+                });
+    
+            addTaskButton.addEventListener("click", function () {
+                const taskText = taskInput.value.trim();
+                if (taskText !== "") {
+                    addTaskToList(taskText); // Add to the list without sending to the server
+                    taskInput.value = "";
+                    saveTaskToServer(taskText); // Save to the server
+                }
+            });
+    
+            taskInput.addEventListener("keyup", function (event) {
+                if (event.key === "Enter") {
+                    addTaskButton.click();
+                }
+            });
+    
+            function saveTaskToServer(taskText) {
+                fetch('/api/tasks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: taskText }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Task saved:', data);
+                })
+                .catch(error => {
+                    console.error('Error saving task:', error);
+                });
+            }
+    
+            function deleteTask(taskText) {
+                fetch('/api/tasks', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: taskText }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Task deleted:', data);
+                })
+                .catch(error => {
+                    console.error('Error deleting task:', error);
+                });
+            }
+        });
+    </script>    
+</body>
+</html>
